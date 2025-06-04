@@ -48,6 +48,7 @@ return {
       dashboard.button("d", "📁 Dotfiles", "<cmd>cd ~/dotfiles <cr>"),
       dashboard.button("z", "🐚 .zshrc", "<cmd>e ~/.zshrc <cr>"),
       dashboard.button("t", "🖥️ .tmux.conf ", "<cmd>e ~/.tmux.conf<cr>"),
+      dashboard.button("q", " 🗙Quit", ":qa<CR>"),
     }
 
     alpha.setup(dashboard.opts)
