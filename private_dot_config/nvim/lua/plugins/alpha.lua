@@ -42,13 +42,14 @@ return {
       }                                                                                                                                                
    -- Add custom bookmarks to dashboard
     dashboard.section.buttons.val = {
-      dashboard.button("c", config_icon .. " Configuration", "<cmd>cd ~/.config/nvim/ <cr>"),
-      dashboard.button("g", git_icon.. " Git", "<cmd>cd ~/git/<cr>"),
+      dashboard.button("c", "🔧 Neovim config", "<cmd>cd ~/.config/nvim/ <cr>"),
+      dashboard.button("C", "📁 Dotfiles config", "<cmd>cd ~/.config/ <cr>"),
+      dashboard.button("g", "🐱 Git", "<cmd>cd ~/git/<cr>"),
       dashboard.button("r", "🗃️ Recent files", ":Telescope oldfiles<CR>"),
-      dashboard.button("d", "📁 Dotfiles", "<cmd>cd ~/dotfiles <cr>"),
       dashboard.button("z", "🐚 .zshrc", "<cmd>e ~/.zshrc <cr>"),
       dashboard.button("t", "🖥️ .tmux.conf ", "<cmd>e ~/.tmux.conf<cr>"),
-      dashboard.button("q", " 🗙Quit", ":qa<CR>"),
+      dashboard.button("G", "👻 Ghostty config ", "<cmd>e ~/.config/ghostty/config<cr>"),
+      dashboard.button("q", "❌ Quit", ":qa<CR>"),
     }
 
     alpha.setup(dashboard.opts)
