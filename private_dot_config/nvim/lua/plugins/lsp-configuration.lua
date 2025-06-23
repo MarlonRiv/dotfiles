@@ -1,315 +1,93 @@
 return {
+  -- 1. Mason: Installs the tools.
   {
     "williamboman/mason.nvim",
-    lazy = false,
-    config = function()
-      require("mason").setup()
-    end,
+    config = true,
   },
-  -- {
-  --   "williamboman/mason-lspconfig.nvim",
-  --   lazy = false,
-  -- },
+
+  -- 2. Mason-LSPConfig: The bridge, now told to do nothing but install.
   {
     "williamboman/mason-lspconfig.nvim",
-    lazy = false,
     config = function()
       require("mason-lspconfig").setup({
-        -- Automatically install these LSP servers
         ensure_installed = {
-          "clangd", -- C++ (for ROS nodes)
-          "pylsp", -- Python (for ROS scripts)
-          "lemminx", -- XML (for launch files, URDF)
-          "yamlls", -- YAML (for parameter files)
-          "lua_ls", -- Lua (for Neovim config)
-          "bashls", -- Bash scripts
-          "cmake", -- CMake files
-          "jsonls", -- JSON files
+          "clangd", "pylsp", "lua_ls", "lemminx", "cmake",
         },
-        -- Automatically configure installed servers
-        handlers = {
-          -- Default handler - applies to all servers without custom config
-          function(server_name)
-            require("lspconfig")[server_name].setup({
-              capabilities = require("cmp_nvim_lsp").default_capabilities(),
-            })
-          end,
-
-          -- Custom handlers for servers that need special configuration
-          ["clangd"] = function()
-            require("lspconfig").clangd.setup({
-              capabilities = require("cmp_nvim_lsp").default_capabilities(),
-              cmd = {
-                "clangd",
-                "--background-index",
-                "--clang-tidy",
-                "--header-insertion=iwyu",
-                "--completion-style=detailed",
-                "--function-arg-placeholders",
-                "--fallback-style=llvm",
-                "--compile-commands-dir=build",
-              },
-              init_options = {
-                usePlaceholders = true,
-                completeUnimported = true,
-                clangdFileStatus = true,
-              },
-              root_dir = function(fname)
-                local util = require("lspconfig.util")
-                return util.root_pattern(
-                  "compile_commands.json",
-                  "compile_flags.txt",
-                  ".git",
-                  "devel",
-                  "build",
-                  "install"
-                )(fname) or util.path.dirname(fname)
-              end,
-            })
-          end,
-
-          ["pylsp"] = function()
-            require("lspconfig").pylsp.setup({
-              capabilities = require("cmp_nvim_lsp").default_capabilities(),
-              settings = {
-                pylsp = {
-                  plugins = {
-                    pycodestyle = {
-                      ignore = { "W391" },
-                      maxLineLength = 100,
-                    },
-                    rope_completion = {
-                      enabled = true,
-                    },
-                    jedi_completion = {
-                      enabled = true,
-                      include_params = true,
-                    },
-                    jedi_hover = {
-                      enabled = true,
-                    },
-                    jedi_references = {
-                      enabled = true,
-                    },
-                    jedi_signature_help = {
-                      enabled = true,
-                    },
-                    jedi_symbols = {
-                      enabled = true,
-                      all_scopes = true,
-                    },
-                  },
-                },
-              },
-            })
-          end,
-
-          ["lemminx"] = function()
-            require("lspconfig").lemminx.setup({
-              capabilities = require("cmp_nvim_lsp").default_capabilities(),
-              settings = {
-                xml = {
-                  catalogs = {
-                    vim.fn.expand("~/.local/share/nvim/ros_schemas.xml"),
-                  },
-                  validation = {
-                    enabled = true,
-                  },
-                  completion = {
-                    autoCloseTags = true,
-                  },
-                },
-              },
-            })
-          end,
-
-          ["yamlls"] = function()
-            require("lspconfig").yamlls.setup({
-              capabilities = require("cmp_nvim_lsp").default_capabilities(),
-              settings = {
-                yaml = {
-                  schemas = {
-                    ["https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json"] =
-                    "docker-compose*.yml",
-                  },
-                  validate = true,
-                  completion = true,
-                },
-              },
-            })
-          end,
-        },
+        automatic_enable = false,
+        handlers = {},
       })
     end,
   },
+
+  -- 3. Nvim-LSPConfig: The command center. This is where all setup happens.
   {
     "neovim/nvim-lspconfig",
-    lazy = false,
+    dependencies = { "mason-lspconfig.nvim" },
     config = function()
-      local capabilities = require("cmp_nvim_lsp").default_capabilities()
       local lspconfig = require("lspconfig")
+      local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
-      -- ROS
+      local on_attach = function(client, bufnr)
+        local opts = { buffer = bufnr, noremap = true, silent = true }
+        vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+        vim.keymap.set("n", "<leader>gd", vim.lsp.buf.definition, opts)
+        vim.keymap.set("n", "<leader>gr", vim.lsp.buf.references, opts)
+        vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+        vim.keymap.set("n", "<space>rn", vim.lsp.buf.rename, opts)
+      end
 
-      -- ROS XML files (launch files, URDF, etc.)
-      -- lspconfig.lemminx.setup({
-      --   capabilities = capabilities,
-      --   settings = {
-      --     xml = {
-      --       catalogs = {
-      --         -- Add ROS XML schemas
-      --         vim.fn.expand("~/.local/share/nvim/ros_schemas.xml"),
-      --       },
-      --       validation = {
-      --         enabled = true,
-      --       },
-      --       completion = {
-      --         autoCloseTags = true,
-      --       },
-      --     },
-      --   },
-      -- })
+      local function get_workspace_dir()
+        local ros_workspace = vim.env.ROS_WORKSPACE
+        if ros_workspace and vim.fn.isdirectory(ros_workspace) == 1 then
+          return ros_workspace
+        end
+      end
 
-      -- Enhanced Python with ROS-specific configuration
-      -- lspconfig.pylsp.setup({
-      --   capabilities = capabilities,
-      --   settings = {
-      --     pylsp = {
-      --       plugins = {
-      --         pycodestyle = {
-      --           ignore = { "W391" },
-      --           maxLineLength = 100,
-      --         },
-      --         rope_completion = {
-      --           enabled = true,
-      --         },
-      --         jedi_completion = {
-      --           enabled = true,
-      --           include_params = true,
-      --         },
-      --         jedi_hover = {
-      --           enabled = true,
-      --         },
-      --         jedi_references = {
-      --           enabled = true,
-      --         },
-      --         jedi_signature_help = {
-      --           enabled = true,
-      --         },
-      --         jedi_symbols = {
-      --           enabled = true,
-      --           all_scopes = true,
-      --         },
-      --       },
-      --     },
-      --   },
-      -- })
-
-      -- Enhanced C++ with ROS-specific configuration
-      -- lspconfig.clangd.setup({
-      --   capabilities = capabilities,
-      --   cmd = {
-      --     "clangd",
-      --     "--background-index",
-      --     "--clang-tidy",
-      --     "--header-insertion=iwyu",
-      --     "--completion-style=detailed",
-      --     "--function-arg-placeholders",
-      --     "--fallback-style=llvm",
-      --     "--compile-commands-dir=build", -- Look for compile_commands.json in build dir
-      --   },
-      --   init_options = {
-      --     usePlaceholders = true,
-      --     completeUnimported = true,
-      --     clangdFileStatus = true,
-      --   },
-      --   root_dir = function(fname)
-      --     -- Look for ROS workspace indicators
-      --     local util = require("lspconfig.util")
-      --     return util.root_pattern(
-      --       "compile_commands.json",
-      --       "compile_flags.txt",
-      --       ".git",
-      --       "devel",
-      --       "build",
-      --       "install"
-      --     )(fname) or util.path.dirname(fname)
-      --   end,
-      -- })
-
-      lspconfig.ts_ls.setup({
+      -- === EXPLICIT SERVER CONFIGURATIONS ===
+      -- These calls are now the ONLY source of LSP servers.
+      lspconfig.clangd.setup({
         capabilities = capabilities,
+        on_attach = on_attach,
+        cmd = {
+          "clangd",
+          "--compile-commands-dir=" .. get_workspace_dir(),
+          "--background-index",
+          "--clang-tidy",
+          "--header-insertion=iwyu",
+          "--completion-style=detailed",
+          "--fallback-style=llvm",
+        },
+        root_dir = get_workspace_dir(),
       })
 
-      -- Configure diagnostics
+      lspconfig.pylsp.setup({
+        capabilities = capabilities,
+        on_attach = on_attach,
+        settings = { pylsp = { plugins = { pycodestyle = { ignore = { "W391" }, maxLineLength = 100 }, rope_completion = { enabled = true }, jedi_completion = { enabled = true, include_params = true } } } },
+      })
+
+      lspconfig.lemminx.setup({ capabilities = capabilities, on_attach = on_attach })
+      lspconfig.lua_ls.setup({ capabilities = capabilities, on_attach = on_attach })
+      lspconfig.cmake.setup({ capabilities = capabilities, on_attach = on_attach })
+
+      -- === GLOBAL LSP & DIAGNOSTIC CONFIGURATION ===
       vim.diagnostic.config({
-        virtual_text = false, -- Disable inline text to avoid clutter
+        virtual_text = false,
         signs = true,
         underline = true,
         update_in_insert = false,
         severity_sort = false,
-        float = {
-          border = "rounded",
-          source = "always",
-          header = "",
-          prefix = "",
-          focusable = false,
-        },
+        float = { border = "rounded", source = "always", header = "", prefix = "", focusable = false },
       })
 
-      -- Set updatetime for faster CursorHold trigger
       vim.o.updatetime = 250
 
-      -- Auto-show diagnostics on cursor hold
       vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
         callback = function()
           vim.diagnostic.open_float(nil, { focus = false })
         end,
       })
 
-      lspconfig.lua_ls.setup({})
-
-      -- lspconfig.clangd.setup({
-      -- 	capabilities = capabilities,
-      -- })
-      lspconfig.bashls.setup({
-        capabilities = capabilities,
-      })
-      lspconfig.cmake.setup({
-        capabilities = capabilities,
-      })
-      lspconfig.jsonls.setup({
-        capabilities = capabilities,
-      })
-      -- lspconfig.yamlls.setup({
-      -- 	capabilities = capabilities,
-      -- })
-      --
-      -- lspconfig.yamlls.setup({
-      --   capabilities = capabilities,
-      --   settings = {
-      --     yaml = {
-      --       schemas = {
-      --         -- Add ROS parameter file schemas
-      --         ["https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json"] =
-      --         "docker-compose*.yml",
-      --       },
-      --       validate = true,
-      --       completion = true,
-      --     },
-      --   },
-      -- })
-      -- lspconfig.pylsp.setup({
-      -- 	capabilities = capabilities,
-      -- })
-      -- LSP Keymaps
-      vim.keymap.set("n", "K", vim.lsp.buf.hover, {})
-      vim.keymap.set("n", "<leader>gd", vim.lsp.buf.definition, {})
-      vim.keymap.set("n", "<leader>gr", vim.lsp.buf.references, {})
-      vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, {})
-      vim.keymap.set("n", "<space>rn", vim.lsp.buf.rename, {})
-
-      -- Additional diagnostic keymaps
       vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float, {})
       vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, {})
       vim.keymap.set("n", "]d", vim.diagnostic.goto_next, {})
