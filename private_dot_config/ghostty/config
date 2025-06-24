@@ -41,8 +41,10 @@
 # # which is explained in the docs for that config option.
 # # Just for example:
 # resize-overlay-duration = 4s 200ms
-#
 
-command=/usr/bin/tmux
+
+background-opacity = 0.8
+command = /usr/bin/zsh --login --interactive
+# command = /usr/bin/tmux
 
 
