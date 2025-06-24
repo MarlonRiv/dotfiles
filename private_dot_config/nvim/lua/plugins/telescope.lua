@@ -17,7 +17,7 @@ return {
     end,
     keys = {                -- Load on these key mappings
       {
-        "<C-p>",
+        "<leader>f",
         function()
           require("telescope.builtin").find_files({
             hidden = true,
