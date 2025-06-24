@@ -55,7 +55,7 @@ return {
           "--clang-tidy",
           "--header-insertion=iwyu",
           "--completion-style=detailed",
-          "--fallback-style=llvm",
+          "--fallback-style={ BasedOnStyle: Google, ColumnLimit: 100, AccessModifierOffset: -1, ConstructorInitializerIndentWidth: 2, AlignEscapedNewlinesLeft: false, AlignTrailingComments: true, AlignConsecutiveAssignments: true, IndentWidth: 2, TabWidth: 2, UseTab: Never }",
         },
         root_dir = get_workspace_dir(),
       })
