@@ -1,10 +1,12 @@
 # If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
 alias inv='nvim $(fzf -m --preview="bat --color=always {}")'
+alias vi="nvim"
+alias lg="lazygit"
 
 function sb() {
     source ~/.zshrc && echo "✅ .zshrc reloaded successfully"
@@ -31,6 +33,68 @@ function y() {
 	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
 	rm -f -- "$tmp"
 }
+
+function catkin_build_with_compile_commands() {
+    # Check if jq is installed
+    if ! command -v jq &> /dev/null; then
+        echo "Error: jq is required but not installed. Install with: sudo apt install jq"
+        return 1
+    fi
+    
+    # Check if we're in a catkin workspace
+    if [ ! -f "src/CMakeLists.txt" ] && [ ! -d "src" ]; then
+        echo "Error: Not in a catkin workspace root directory"
+        return 1
+    fi
+    
+    echo "Running catkin build..."
+    catkin build "$@"
+    
+    local build_status=$?
+    
+    if [ $build_status -eq 0 ]; then
+        echo "✓ Build successful, generating compile_commands.json..."
+        
+        if [ ! -d "build" ]; then
+            echo "Warning: No build directory found after successful build"
+            return 1
+        fi
+        
+        # Remove old merged file
+        rm -f compile_commands.json
+        
+        # Count available compile_commands.json files
+        local file_count=$(find build -name "compile_commands.json" -type f | wc -l)
+        
+        if [ $file_count -eq 0 ]; then
+            echo "Warning: No compile_commands.json files found in build directory"
+            return 1
+        fi
+        
+        echo "Merging compile commands from $file_count files:"
+        find build -name "compile_commands.json" -type f | while read file; do
+            echo "  - $file"
+        done
+        
+        # Merge all files
+        find build -name "compile_commands.json" -type f -exec cat {} \; | jq -s 'add' > compile_commands.json
+        
+        if [ -f "compile_commands.json" ]; then
+            local entry_count=$(jq length compile_commands.json 2>/dev/null || echo "unknown")
+            echo "✓ Created merged compile_commands.json with $entry_count entries"
+        else
+            echo "Error: Failed to create compile_commands.json"
+            return 1
+        fi
+    else
+        echo "✗ Build failed (exit code: $build_status), skipping compile_commands.json generation"
+        return $build_status
+    fi
+}
+
+# Aliases for convenience
+alias cb='catkin_build_with_compile_commands'
+alias cbcc='catkin_build_with_compile_commands'
 
 #Tmux starting logic to check if tmux is available and attaches to existing session, if not create a new one
 if command -v tmux &> /dev/null && [[ -z "$TMUX" ]]; then
@@ -133,6 +197,7 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 #
+
 eval "$(starship init zsh)"
 
 # Created by `pipx` on 2025-05-21 09:58:41
@@ -141,3 +206,7 @@ export PATH="$PATH:/home/marlonriv/.local/bin"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+# export PATH="$HOME/.local/bin:$PATH"
+#
+
+export ROS_WORKSPACE="/home/rivermar/iroc_workspace"
