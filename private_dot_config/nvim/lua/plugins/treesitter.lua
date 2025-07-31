@@ -7,6 +7,7 @@ return {
       config.setup({
         auto_install = false,
         ensure_installed = {
+
           "bash",
           "cpp",
           "c",
@@ -16,6 +17,8 @@ return {
         },
         highlight = { enable = true },
         indent = { enable = false },
+        -- fold = { enable = true },
+
       })
     end
   }

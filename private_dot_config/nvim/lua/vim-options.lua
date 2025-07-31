@@ -8,6 +8,17 @@ vim.g.mapleader= " "
 vim.opt.number = true
 vim.opt.relativenumber = true
 
+-- Using treesitter as folding method
+-- vim.opt.foldmethod = "expr"
+-- vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
+-- vim.opt.foldenable = true
+-- vim.opt.foldlevel = 0
+
+-- Open fold tree under cursor  
+vim.keymap.set('n', '<leader>fo', 'zO', { desc = 'Open fold tree under cursor' })
+-- Close fold tree under cursor  
+vim.keymap.set('n', '<leader>fc', 'zC', { desc = 'Close fold tree under cursor' })
+
 -- removes highlighting from search results
 vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>')
 
