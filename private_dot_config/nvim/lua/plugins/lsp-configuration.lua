@@ -5,19 +5,24 @@ return {
     config = true,
   },
 
-  -- 2. Mason-LSPConfig: The bridge, now told to do nothing but install.
-  {
-    "williamboman/mason-lspconfig.nvim",
-    config = function()
-      require("mason-lspconfig").setup({
-        ensure_installed = {
-          "clangd", "pylsp", "lua_ls", "lemminx", "cmake",
-        },
-        automatic_enable = false,
-        handlers = {},
-      })
-    end,
-  },
+	-- 2. Mason-LSPConfig: The bridge, now told to do nothing but install.
+	{
+		"williamboman/mason-lspconfig.nvim",
+		config = function()
+			require("mason-lspconfig").setup({
+				ensure_installed = {
+					"clangd",
+					"pylsp",
+					"lua_ls",
+					"lemminx",
+					"cmake",
+					"rust_analyzer",
+				},
+				automatic_enable = false,
+				handlers = {},
+			})
+		end,
+	},
 
   -- 3. Nvim-LSPConfig: The command center. This is where all setup happens.
   {
@@ -66,9 +71,10 @@ return {
         settings = { pylsp = { plugins = { pycodestyle = { ignore = { "W391" }, maxLineLength = 100 }, rope_completion = { enabled = true }, jedi_completion = { enabled = true, include_params = true } } } },
       })
 
-      lspconfig.lemminx.setup({ capabilities = capabilities, on_attach = on_attach })
-      lspconfig.lua_ls.setup({ capabilities = capabilities, on_attach = on_attach })
-      lspconfig.cmake.setup({ capabilities = capabilities, on_attach = on_attach })
+			lspconfig.lemminx.setup({ capabilities = capabilities, on_attach = on_attach })
+			lspconfig.lua_ls.setup({ capabilities = capabilities, on_attach = on_attach })
+			lspconfig.cmake.setup({ capabilities = capabilities, on_attach = on_attach })
+			lspconfig.rust_analyzer.setup({ capabilities = capabilities, on_attach = on_attach })
 
       -- === GLOBAL LSP & DIAGNOSTIC CONFIGURATION ===
       vim.diagnostic.config({
