@@ -1,3 +1,5 @@
+# profiling of zshrc
+# zmodload zsh/zprof 
 # If you come from bash you might have to change your $PATH.
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
@@ -7,8 +9,12 @@ export ZSH="$HOME/.oh-my-zsh"
 alias inv='nvim $(fzf -m --preview="bat --color=always {}")'
 alias vi="nvim"
 alias lg="lazygit"
+alias ld="lazydocker"
 
-function sb() {
+# Optional aliases
+# alias cb="colcon build --symlink-install"
+
+function sz() {
     source ~/.zshrc && echo "✅ .zshrc reloaded successfully"
 }
 
@@ -93,7 +99,7 @@ function catkin_build_with_compile_commands() {
 }
 
 # Aliases for convenience
-alias cb='catkin_build_with_compile_commands'
+# alias cb1='catkin_build_with_compile_commands'
 alias cbcc='catkin_build_with_compile_commands'
 
 #Tmux starting logic to check if tmux is available and attaches to existing session, if not create a new one
@@ -164,8 +170,10 @@ fi
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git)
+export NVM_LAZY_LOAD=true
+plugins=(git zsh-nvm)
 
+DISABLE_AUTO_UPDATE="true"
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
@@ -204,9 +212,148 @@ eval "$(starship init zsh)"
 export PATH="$PATH:/home/marlonriv/.local/bin"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+export FZF_TMUX_OPTS="-p"
+export FZF_CTRL_R_OPTS="--reverse --preview 'echo {}' --preview-window down:3:hidden:wrap --bind '?:toggle-preview'"
 
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-# export PATH="$HOME/.local/bin:$PATH"
+# function ros_env() {
+#     export PATH="/usr/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+#     echo "Switched to ROS environment"
+# }
+
+# Enable bash completion compatibility in zsh
+autoload -U +X bashcompinit && bashcompinit
+autoload -U +X compinit && compinit
+
+# Reset function to clean PATH
+function reset_env() {
+    export PATH="/usr/bin:/usr/local/bin:/bin:/sbin:/usr/sbin"
+    unset ROS_DISTRO
+    echo "Environment reset to system defaults" >&2
+}
+
+# General development environment  
+function dev_env() {
+    reset_env
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    export PATH="$HOME/.local/bin:$PATH"
+    echo "Switched to general dev environment"
+}
+
+# Function to source ROS2 environment when needed
+export ROS_WORKSPACE="/home/marlonriv/ws_iroc_ros2"
+function ros2_env() {
+    reset_env
+    if [[ -z "$ROS_DISTRO" ]]; then
+        echo "🤖 Loading ROS2 environment..." >&2
+        # Put system Python paths first, before any Homebrew paths
+        export PATH="/usr/bin:/usr/local/bin:/bin:/sbin:$PATH"
+        # Remove any homebrew paths from PATH temporarily
+        export PATH=$(echo $PATH | tr ':' '\n' | grep -v "/home/linuxbrew" | tr '\n' ':' | sed 's/:$//')
+        source /opt/ros/jazzy/setup.zsh
+        source ~/ws_iroc_ros2/install/setup.zsh
+        # ROS DEVELOPMENT
+        # * source this after exporting $ROS_WORKSPACE="<path to your workspace>"
+        # * workspace is automatically sourced and the soucing is cached
+        # * to force-source a workspace after adding new packages, call `presource_ros`
+        source $HOME/git/mrs_uav_development/shell_additions/shell_additions.sh
+        export ROS_DISTRO="jazzy"
+        export RMW_IMPLEMENTATION="rmw_zenoh_cpp"
+        export COLCON_DEFAULT_OUTPUT_STYLE=catkin_tools
+        export RCUTILS_COLORIZED_OUTPUT=1
+        echo "✅ ROS2 environment loaded" >&2
+    else
+        echo "✅ ROS2 environment already loaded" >&2
+
+    fi
+}
+
+# Auto-alias common ROS2 commands to load environment first
+function ros2() {
+    ros2_env
+    command ros2 "$@"
+}
+
+function colcon() {
+    ros2_env
+    command colcon "$@"
+}
+
+# Find the root of the ROS2 package containing a given directory
+function _ros_pkg_root() {
+    local dir="${1:-$PWD}"
+    while [[ "$dir" != "/" ]]; do
+        [[ -f "$dir/package.xml" ]] && { echo "$dir"; return 0; }
+        dir=$(dirname "$dir")
+    done
+    return 1
+}
+
+# Format (or check) C++ code using the exact same method as ament_clang_format
 #
+# Usage:
+#   ros_fmt                        # format current package
+#   ros_fmt pkg1 pkg2              # format named packages in $ROS_WORKSPACE
+#   ros_fmt --check                # check current package (no changes)
+#   ros_fmt --check pkg1 pkg2      # check named packages
+function ros_fmt() {
+    ros2_env
 
-export ROS_WORKSPACE="/home/rivermar/iroc_workspace"
+    local reformat="--reformat"
+    local packages=()
+
+    for arg in "$@"; do
+        [[ "$arg" == "--check" ]] && reformat="" || packages+=("$arg")
+    done
+
+    local _fmt_one() {
+        local pkg_root="$1"
+        local pkg_name=$(basename "$pkg_root")
+        local config="$pkg_root/.clang-format"
+
+        if [[ ! -f "$config" ]]; then
+            echo "⚠  $pkg_name: no .clang-format found, skipping"
+            return 1
+        fi
+
+        local dirs=()
+        [[ -d "$pkg_root/src" ]]     && dirs+=("$pkg_root/src")
+        [[ -d "$pkg_root/include" ]] && dirs+=("$pkg_root/include")
+
+        if [[ ${#dirs[@]} -eq 0 ]]; then
+            echo "⚠  $pkg_name: no src/ or include/ found, skipping"
+            return 1
+        fi
+
+        if [[ -n "$reformat" ]]; then
+            echo "🎨 Formatting $pkg_name ..."
+        else
+            echo "🔍 Checking $pkg_name ..."
+        fi
+
+        /opt/ros/jazzy/bin/ament_clang_format $reformat \
+            --config "$config" "${dirs[@]}"
+    }
+
+    if [[ ${#packages[@]} -eq 0 ]]; then
+        local root
+        root=$(_ros_pkg_root "$PWD") || { echo "❌ Not inside a ROS2 package"; return 1; }
+        _fmt_one "$root"
+    else
+        for pkg in "${packages[@]}"; do
+            local path
+            path=$(command colcon --log-base /dev/null list \
+                --packages-select "$pkg" --paths-only 2>/dev/null)
+            if [[ -z "$path" ]]; then
+                echo "❌ Package '$pkg' not found in $ROS_WORKSPACE"
+                continue
+            fi
+            _fmt_one "$ROS_WORKSPACE/$path"
+        done
+    fi
+}
+
+# By default, load general development environment
+dev_env
+
+# profiling of zshrc
+# zprof
