@@ -55,4 +55,6 @@ theme = dark:"Catppuccin Macchiato", light:"Catppuccin Latte"
 confirm-close-surface = false
 
 
+shell-integration-features = sudo,no-ssh-terminfo,ssh-env
+
 
