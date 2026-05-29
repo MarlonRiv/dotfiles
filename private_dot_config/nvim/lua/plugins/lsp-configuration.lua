@@ -44,6 +44,8 @@ return {
 			local function get_workspace_dir()
 				local ros_workspace = vim.env.ROS_WORKSPACE
 				if ros_workspace and vim.fn.isdirectory(ros_workspace) == 1 then
+          --log out if we are using a ROS workspace 
+          print("Using ROS workspace: " .. ros_workspace)
 					return ros_workspace
 				end
 			end
@@ -57,7 +59,9 @@ return {
 				"--clang-tidy",
 				"--header-insertion=iwyu",
 				"--completion-style=detailed",
-				"--fallback-style={ BasedOnStyle: LLVM, ColumnLimit: 160, IndentWidth: 2, TabWidth: 2, UseTab: Never, AccessModifierOffset: -1, PointerAlignment: Left, AlwaysBreakTemplateDeclarations: true, IndentCaseLabels: true, SortIncludes: false, AllowShortFunctionsOnASingleLine: None }",
+        "--log=verbose",
+        -- "--fallback-style=LLVM",
+				-- "--fallback-style={ BasedOnStyle: LLVM, ColumnLimit: 160, IndentWidth: 2, TabWidth: 2, UseTab: Never, AccessModifierOffset: -1, PointerAlignment: Left, AlwaysBreakTemplateDeclarations: true, IndentCaseLabels: true, SortIncludes: false, AllowShortFunctionsOnASingleLine: None }",
 			}
 			if workspace_dir then
 				table.insert(clangd_cmd, "--compile-commands-dir=" .. workspace_dir)

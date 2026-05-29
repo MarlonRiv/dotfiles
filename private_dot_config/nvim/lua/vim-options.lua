@@ -1,3 +1,10 @@
+-- Treat .tpp files as C++ (template implementation files)
+vim.filetype.add({
+  extension = {
+    tpp = "cpp",
+  },
+})
+
 vim.cmd("set expandtab")
 vim.cmd("set tabstop=2")
 vim.cmd("set softtabstop=2")
