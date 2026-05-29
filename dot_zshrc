@@ -227,7 +227,11 @@ autoload -U +X compinit && compinit
 # Reset function to clean PATH
 function reset_env() {
     export PATH="/usr/bin:/usr/local/bin:/bin:/sbin:/usr/sbin"
-    unset ROS_DISTRO
+    unset ROS_DISTRO ROS_VERSION ROS_PYTHON_VERSION ROS_LOCALHOST_ONLY \
+          ROS_AUTOMATIC_DISCOVERY_RANGE RMW_IMPLEMENTATION \
+          AMENT_PREFIX_PATH CMAKE_PREFIX_PATH COLCON_PREFIX_PATH \
+          ROS_PACKAGE_PATH PYTHONPATH LD_LIBRARY_PATH \
+          PKG_CONFIG_PATH AMENT_CURRENT_PREFIX
     echo "Environment reset to system defaults" >&2
 }
 
@@ -242,29 +246,27 @@ function dev_env() {
 # Function to source ROS2 environment when needed
 export ROS_WORKSPACE="/home/marlonriv/ws_iroc_ros2"
 function ros2_env() {
-    reset_env
-    if [[ -z "$ROS_DISTRO" ]]; then
-        echo "🤖 Loading ROS2 environment..." >&2
-        # Put system Python paths first, before any Homebrew paths
-        export PATH="/usr/bin:/usr/local/bin:/bin:/sbin:$PATH"
-        # Remove any homebrew paths from PATH temporarily
-        export PATH=$(echo $PATH | tr ':' '\n' | grep -v "/home/linuxbrew" | tr '\n' ':' | sed 's/:$//')
-        source /opt/ros/jazzy/setup.zsh
-        source ~/ws_iroc_ros2/install/setup.zsh
-        # ROS DEVELOPMENT
-        # * source this after exporting $ROS_WORKSPACE="<path to your workspace>"
-        # * workspace is automatically sourced and the soucing is cached
-        # * to force-source a workspace after adding new packages, call `presource_ros`
-        source $HOME/git/mrs_uav_development/shell_additions/shell_additions.sh
-        export ROS_DISTRO="jazzy"
-        export RMW_IMPLEMENTATION="rmw_zenoh_cpp"
-        export COLCON_DEFAULT_OUTPUT_STYLE=catkin_tools
-        export RCUTILS_COLORIZED_OUTPUT=1
-        echo "✅ ROS2 environment loaded" >&2
-    else
-        echo "✅ ROS2 environment already loaded" >&2
-
+    if [[ -n "$ROS_DISTRO" ]]; then
+        return 0
     fi
+    reset_env
+    echo "🤖 Loading ROS2 environment..." >&2
+    export PATH="/usr/bin:/usr/local/bin:/bin:/sbin:$PATH"
+    source /opt/ros/jazzy/setup.zsh
+    source ~/ws_iroc_ros2/install/setup.zsh
+    # ROS DEVELOPMENT
+    # * source this after exporting $ROS_WORKSPACE="<path to your workspace>"
+    # * workspace is automatically sourced and the soucing is cached
+    # * to force-source a workspace after adding new packages, call `presource_ros`
+    source $HOME/git/mrs_uav_development/shell_additions/shell_additions.sh
+    export ROS_DISTRO="jazzy"
+    export RMW_IMPLEMENTATION="rmw_zenoh_cpp"
+    export COLCON_DEFAULT_OUTPUT_STYLE=catkin_tools
+    export RCUTILS_COLORIZED_OUTPUT=1
+    # Append brew tools at the END of PATH so ROS Python keeps priority
+    # but dev tools (lazygit, bat, nvim, etc.) remain available
+    export PATH="$HOME/.local/bin:$PATH:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin"
+    echo "✅ ROS2 environment loaded" >&2
 }
 
 # Auto-alias common ROS2 commands to load environment first
@@ -318,6 +320,7 @@ function ros_fmt() {
         local dirs=()
         [[ -d "$pkg_root/src" ]]     && dirs+=("$pkg_root/src")
         [[ -d "$pkg_root/include" ]] && dirs+=("$pkg_root/include")
+        [[ -d "$pkg_root/test" ]]    && dirs+=("$pkg_root/test")
 
         if [[ ${#dirs[@]} -eq 0 ]]; then
             echo "⚠  $pkg_name: no src/ or include/ found, skipping"
@@ -357,3 +360,7 @@ dev_env
 
 # profiling of zshrc
 # zprof
+
+. "$HOME/.local/share/../bin/env"
+
+export PATH="/home/marlonriv/.pixi/bin:$PATH"
