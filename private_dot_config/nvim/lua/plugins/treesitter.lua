@@ -14,6 +14,8 @@ return {
           "python",
           "json",
           "lua",
+          "markdown",
+          "markdown_inline",
         },
         highlight = { enable = true },
         indent = { enable = false },

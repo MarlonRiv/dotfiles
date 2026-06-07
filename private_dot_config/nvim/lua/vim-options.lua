@@ -21,6 +21,9 @@ vim.opt.relativenumber = true
 -- vim.opt.foldenable = true
 -- vim.opt.foldlevel = 0
 
+-- Exiting insert mode with "jk"
+vim.keymap.set('i', 'jk', '<Esc>', { noremap = true })
+
 -- Open fold tree under cursor  
 vim.keymap.set('n', '<leader>fo', 'zO', { desc = 'Open fold tree under cursor' })
 -- Close fold tree under cursor  
